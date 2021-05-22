@@ -11,7 +11,6 @@ class Ingredients extends Component {
             <React.Fragment key={ingredient.id}>
                 <tr key={ingredient.id}>
                     <td>
-                        {console.log(1)}
                         <input
                             type="checkbox"
                             className="form-input"
@@ -82,31 +81,49 @@ class Recipes extends Component {
 class Basket extends Component {
     getIngredients() {
         const recipes = this.props.recipes;
-        let ingredients = [];
+        const ingredients = [];
         recipes.map((recipe) => {
             if (recipe.quantity > 0) {
                 recipe.ingredients.map((ingredient) => {
                     if (ingredient.include && ingredients.findIndex(e => e.ingredient === ingredient.ingredient) === -1) {
                         ingredients.push({
                             ingredient: ingredient.ingredient,
-                            quantity: ingredient.quantity * recipe.quantity,
-                            measurement: ingredient.measurement
+                            measurements: [{
+                                quantity: ingredient.quantity * recipe.quantity,
+                                unit: ingredient.measurement
+                            }]
                         });
                     } else {
-                        
+                        ingredients.find(ing => ing.ingredient === ingredient.ingredient).measurements.push({
+                            quantity: ingredient.quantity * recipe.quantity,
+                            unit: ingredient.measurement
+                        });
                     }
                 })
             }
         });
-        return ingredients;
+        return ingredients.map(ingredient => ({
+            ...ingredient,
+            measurementSum: addMeasurements(ingredient.measurements).map(e => simplifyUnits(e))
+        }));
+    }
+
+    renderMeasurements(measurementSum) {
+        return measurementSum.map(measurement => (
+            <React.Fragment>
+                {roundDecimal(measurement.quantity, 1)}
+                {" "}
+                {measurement.unit}
+                {" "}
+            </React.Fragment>
+        ));
     }
 
     render() {
         const ingredients = this.getIngredients();
         return ingredients.map((ingredient) => (
             <div key={ingredient.id}>
-                {simplifyUnits(ingredient.quantity, ingredient.measurement)}
-                {" "}
+                {this.renderMeasurements(ingredient.measurementSum)}
                 {ingredient.ingredient}
             </div>
         ));
@@ -171,7 +188,6 @@ class App extends Component {
         const recipeID = parseInt(event.target.dataset.recipeid);
         const ingredientID = parseInt(event.target.dataset.ingredientid);
         const recipeList = this.state.recipeList;
-        console.log(recipeID, ingredientID)
         recipeList.find(x => x.id === recipeID).ingredients.find(y => y.id === ingredientID).include ^= true;
         this.setState({ recipeList: recipeList });
     }
@@ -188,7 +204,6 @@ class App extends Component {
             <main className="container">
                 <h1>Recipes</h1>
                 <Accordion>
-                    {console.log(recipes)}
                     <Recipes
                         recipes={recipes}
                         addToBasket={id => this.addToBasket(id)}
@@ -216,69 +231,108 @@ class App extends Component {
 
 export default App;
 
-function roundDecimal(value, decimalPlace) {
+function roundDecimal(value, decimalPlace=0) {
     return Math.round(value * (10 ** decimalPlace)) / (10 ** decimalPlace)
 }
 
 function measurementUnits() {
     const units = {
         // Volume
+        gal: {
+            min: 0.5,
+            dimension: "volume",
+            next: null,
+            prev: {unit: "cup", conversion: 16}
+        },
         cup: {
             min: 0.25,
             dimension: "volume",
-            next: null,
-            prev: "tbsp",
-            conversion: {
-                floz: 8,
-                tbsp: 16,
-                tsp: 48,
-            }
+            next: { unit: "gal", conversion: 1 / 16 },
+            prev: {unit: "tbsp", conversion: 16}
         },
         floz: {
             min: 1,
             dimension: "volume",
-            next: "cup",
-            prev: "tbsp",
-            conversion: {
-                tbsp: 2,
-                tsp: 6,
-            }
+            next: { unit: "cup", conversion: 1/8 },
+            prev: { unit: "tbsp", conversion: 2 }
         },
         tbsp: {
             min: 1,
             dimension: "volume",
-            next: "floz",
-            prev: "tsp",
-            conversion: {
-                tsp: 3,
-            }
+            next: { unit: "cup", conversion: 1/16 },
+            prev: { unit: "tsp", conversion: 3 }
         },
         tsp: {
             min: 0,
             dimension: "volume",
-            next: "tbsp",
-            prev: null,
-            conversion: {
-
-            }
+            next: { unit: "tbsp", conversion: 1/3 },
+            prev: null
         }
     };
     return units;
 }
 
-function simplifyUnits(quantity, unit=null) {
+function getDimension(unit) {
     const units = measurementUnits();
     if (unit in units) {
+        return units[unit].dimension;
+    } else if (unit === "") {
+        return "quantity";
+    } else {
+        return "dimension-" + unit;
+    }
+}
+
+function convertUnits(quantity, unitIn, unitOut) {
+    const units = measurementUnits();
+    if (unitIn in units && unitOut in units) {
+        if (units[unitIn].dimension === units[unitOut].dimension) {
+            let factor = 1;
+            let unit = unitIn;
+            while (true) {
+                if (units[unit].next != null) {
+                    factor *= units[unit].next.conversion;
+                    unit = units[unit].next.unit;
+                    if (unit === unitOut) {
+                        return { quantity: quantity * factor, unit: unit };
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            factor = 1;
+            unit = unitIn;
+            while (true) {
+                if (units[unit].prev != null) {
+                    factor *= units[unit].prev.conversion;
+                    unit = units[unit].prev.unit;
+                    if (unit === unitOut) {
+                        return { quantity: quantity * factor, unit: unit };
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    return { quantity: quantity, unit: unitIn };
+}
+
+function simplifyUnits(measurement) {
+    const units = measurementUnits();
+    let quantity = measurement.quantity;
+    let unit = measurement.unit;
+    if (unit in units) {
         while (true) {
-            const unitNext = units[unit].next;
-            const unitPrev = units[unit].prev;
-            if (quantity < units[unit].min && unitPrev != null) {
-                quantity *= units[unit].conversion[unitPrev];
-                unit = unitPrev;
-            } else if (unitNext != null) {
-                if (quantity >= units[unitNext].min * units[unitNext].conversion[unit]) {
-                    quantity /= units[unitNext].conversion[unit];
-                    unit = unitNext;
+            if (quantity < units[unit].min && units[unit].prev != null) {
+                quantity *= units[unit].prev.conversion;
+                unit = units[unit].prev.unit;
+            } else if (units[unit].next != null) {
+                if (quantity * units[unit].next.conversion >= units[units[unit].next.unit].min) {
+                    quantity *= units[unit].next.conversion;
+                    unit = units[unit].next.unit;
                 } else {
                     break;
                 }
@@ -287,20 +341,29 @@ function simplifyUnits(quantity, unit=null) {
             }
         }
     }
-    return [quantity, " ", unit];
+    return { quantity: quantity, unit: unit };
 }
 
 function addMeasurements(measurements) {
     const units = measurementUnits();
-    var results = {}
+    const results = [];
     for (const measurement of measurements) {
-        if (measurement.unit in units) {
-            const dimension = units[measurement.unit].dimension;
-            if (dimension in results) {
-                results[dimension].push([{ quantity: measurement.quantity, unit: measurement.unit}])
+        const dimension = getDimension(measurement.unit);
+        if (results.findIndex(e => e.dimension === dimension) === -1) {
+            results.push({
+                dimension: dimension,
+                quantity: measurement.quantity,
+                unit: measurement.unit
+            });
+        } else {
+            if (measurement.unit in units) {
+                results.find(e => e.dimension === dimension).quantity += convertUnits(measurement.quantity, measurement.unit, results.find(e => e.dimension === dimension).unit).quantity;
+            } else if (measurement.unit === results.find(e => e.dimension === dimension).unit) {
+                results.find(e => e.dimension === dimension).quantity += measurement.quantity;
             } else {
-                results[dimension] = [{ quantity: measurement.quantity, unit: measurement.unit }];
-            }
+                console.log("Error adding measurements.")
+            }        
         }
     }
+    return results;
 }
