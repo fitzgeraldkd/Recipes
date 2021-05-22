@@ -9,23 +9,30 @@ class Ingredients extends Component {
     render() {
         const results = this.props.ingredients.map((ingredient) => (
             <React.Fragment key={ingredient.id}>
-            <tr key={ingredient.id}>
-                <td>
-                    <input type="checkbox" className="form-input" />
-                </td>
-                <td className="text-right">
-                    {ingredient.quantity}
-                </td>
-                <td>
-                    {ingredient.measurement}
-                </td>
-                <td>
-                    {ingredient.ingredient}
-                </td>
-                <td>
-                    {ingredient.prepared}
-                </td>
-                </tr>
+                <tr key={ingredient.id}>
+                    <td>
+                        {console.log(1)}
+                        <input
+                            type="checkbox"
+                            className="form-input"
+                            checked={ingredient.include}
+                            data-recipeid={ingredient.recipe}
+                            data-ingredientid={ingredient.id}
+                            onChange={this.props.toggleIngredient} />
+                    </td>
+                    <td className="text-right">
+                        {ingredient.quantity}
+                    </td>
+                    <td>
+                        {ingredient.measurement}
+                    </td>
+                    <td>
+                        {ingredient.ingredient}
+                    </td>
+                    <td>
+                        {ingredient.prepared}
+                    </td>
+                    </tr>
                 </React.Fragment>
         ));
         return results;
@@ -48,7 +55,7 @@ class Recipes extends Component {
                             </div>
                             <div className="col-3 btn-group text-right">
                                 <button type="button" className="btn btn-secondary" onClick={() => this.props.removeFromBasket(recipe.id)}><Dash /></button>
-                                <div className="btn btn-secondary">{this.props.basket.find(x => x.id === recipe.id).quantity}</div>
+                                <div className="btn btn-secondary">{recipe.quantity}</div>
                                 <button type="button" className="btn btn-secondary" onClick={() => this.props.addToBasket(recipe.id)}><Plus /></button>
                             </div>
                         </div>
@@ -59,7 +66,10 @@ class Recipes extends Component {
                     <Card.Body>
                         <table className="table table-striped">
                             <tbody>
-                                <Ingredients ingredients={recipe.ingredients} />
+                                <Ingredients
+                                    ingredients={recipe.ingredients}
+                                    toggleIngredient={this.props.toggleIngredient}
+                                />
                             </tbody>
                         </table>
                     </Card.Body>
@@ -72,16 +82,14 @@ class Recipes extends Component {
 class Basket extends Component {
     getIngredients() {
         const recipes = this.props.recipes;
-        const basket = this.props.basket;
         let ingredients = [];
         recipes.map((recipe) => {
-            console.log(basket, recipe.id, basket[recipe.id], recipes, recipe)
-            if (basket[recipe.id].quantity > 0) {
-                recipe.map((ingredient) => {
-                    if (ingredients.findIndex(e => e.ingredient === ingredient.ingredient) === -1) {
+            if (recipe.quantity > 0) {
+                recipe.ingredients.map((ingredient) => {
+                    if (ingredient.include && ingredients.findIndex(e => e.ingredient === ingredient.ingredient) === -1) {
                         ingredients.push({
                             ingredient: ingredient.ingredient,
-                            quantity: ingredient.quantity,
+                            quantity: ingredient.quantity * recipe.quantity,
                             measurement: ingredient.measurement
                         });
                     } else {
@@ -94,14 +102,14 @@ class Basket extends Component {
     }
 
     render() {
-/*        const ingredients = this.getIngredients();
-        console.log(ingredients);
+        const ingredients = this.getIngredients();
         return ingredients.map((ingredient) => (
-            <div key={ingredient.id}>Test</div>
-        ));*/
-        return (
-            <div>Test</div>
-        );
+            <div key={ingredient.id}>
+                {simplifyUnits(ingredient.quantity, ingredient.measurement)}
+                {" "}
+                {ingredient.ingredient}
+            </div>
+        ));
     }
 }
 
@@ -125,62 +133,79 @@ class App extends Component {
         axios
          .get("/api/recipes/")
             .then((res) => {
-                const basket = res.data.map(recipe => ({
-                    id: recipe.id,
-                    quantity: 0
-                }))
-                this.setState({ recipeList: res.data, basket: basket })
+                const recipes = res.data.map(obj => ({
+                    ...obj,
+                    quantity: 0,
+                    ingredients: obj.ingredients.map(ing => ({
+                        ...ing,
+                        include: true,
+                    }))
+                }));
+                this.setState({ recipeList: recipes})
 
             })
          .catch((err) => console.log(err));
     };
 
     resetBasket = () => {
-        const basket = this.state.recipeList;
-        this.setState({
-            basket: this.state.recipeList.map(recipe => ({
-                id: recipe.id,
-                quantity: 0,
-            }))
-        });
+        const recipeList = this.state.recipeList.map(obj => ({ ...obj, quantity: 0 }));
+        this.setState({ recipeList: recipeList });
     };
 
     addToBasket(recipeID) {
-        const basket = this.state.basket;
-        basket.find(x => x.id === recipeID).quantity++;
-        this.setState({ basket: basket });
+        const recipeList = this.state.recipeList;
+        recipeList.find(x => x.id === recipeID).quantity++;
+        this.setState({ recipeList: recipeList });
     }
 
     removeFromBasket(recipeID) {
-        const basket = this.state.basket;
-        basket.find(x => x.id === recipeID).quantity--;
-        this.setState({ basket: basket });
+        const recipeList = this.state.recipeList;
+        if (recipeList.find(x => x.id === recipeID).quantity > 0) {
+            recipeList.find(x => x.id === recipeID).quantity--
+        }
+        this.setState({ recipeList: recipeList });
+    }
+
+    toggleIngredientB = (event) => {
+        console.log(event);
+        const recipeID = parseInt(event.target.dataset.recipeid);
+        const ingredientID = parseInt(event.target.dataset.ingredientid);
+        const recipeList = this.state.recipeList;
+        console.log(recipeID, ingredientID)
+        recipeList.find(x => x.id === recipeID).ingredients.find(y => y.id === ingredientID).include ^= true;
+        this.setState({ recipeList: recipeList });
+    }
+
+    toggleIngredient(recipeID, ingredientID) {
+        const recipeList = this.state.recipeList;
+        recipeList.find(x => x.id === recipeID).ingredients.find(y => y.id === ingredientID).include ^= true;
+        this.setState({ recipeList: recipeList });
     }
 
     render() {
         const recipes = this.state.recipeList;
-        const basket = this.state.basket;
         return (
             <main className="container">
                 <h1>Recipes</h1>
                 <Accordion>
+                    {console.log(recipes)}
                     <Recipes
                         recipes={recipes}
-                        basket={basket}
                         addToBasket={id => this.addToBasket(id)}
                         removeFromBasket={id => this.removeFromBasket(id)}
+                        toggleIngredient={this.toggleIngredientB}
                     />
                 </Accordion>
                 <div className="card">
                     <div className="card-header">
+                        Shopping List
                         <div onClick={() => this.resetBasket()}>
-                            Empty<CartX />
+                            Empty <CartX />
                         </div>
                     </div>
                     <div className="card-body">
                         <Basket
                             recipes={recipes}
-                            basket={basket}
                         />
                     </div>
                 </div>
@@ -191,7 +216,11 @@ class App extends Component {
 
 export default App;
 
-function units() {
+function roundDecimal(value, decimalPlace) {
+    return Math.round(value * (10 ** decimalPlace)) / (10 ** decimalPlace)
+}
+
+function measurementUnits() {
     const units = {
         // Volume
         cup: {
@@ -237,13 +266,12 @@ function units() {
     return units;
 }
 
-function simplifyUnits(quantity, unit) {
-    const units = units();
+function simplifyUnits(quantity, unit=null) {
+    const units = measurementUnits();
     if (unit in units) {
         while (true) {
             const unitNext = units[unit].next;
             const unitPrev = units[unit].prev;
-            console.log(unit);
             if (quantity < units[unit].min && unitPrev != null) {
                 quantity *= units[unit].conversion[unitPrev];
                 unit = unitPrev;
@@ -259,19 +287,19 @@ function simplifyUnits(quantity, unit) {
             }
         }
     }
-    return ["SUCCESS", quantity, unit];
+    return [quantity, " ", unit];
 }
 
 function addMeasurements(measurements) {
-    const units = units();
+    const units = measurementUnits();
     var results = {}
     for (const measurement of measurements) {
         if (measurement.unit in units) {
             const dimension = units[measurement.unit].dimension;
             if (dimension in results) {
-
+                results[dimension].push([{ quantity: measurement.quantity, unit: measurement.unit}])
             } else {
-                results[dimension] = measurement.quantity;
+                results[dimension] = [{ quantity: measurement.quantity, unit: measurement.unit }];
             }
         }
     }
