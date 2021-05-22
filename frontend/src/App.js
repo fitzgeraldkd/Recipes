@@ -63,7 +63,7 @@ class Recipes extends Component {
 
                 <Accordion.Collapse eventKey={recipe.id}>
                     <Card.Body>
-                        <table className="table table-striped">
+                        <table className="card-table table table-striped">
                             <tbody>
                                 <Ingredients
                                     ingredients={recipe.ingredients}
@@ -85,19 +85,21 @@ class Basket extends Component {
         recipes.map((recipe) => {
             if (recipe.quantity > 0) {
                 recipe.ingredients.map((ingredient) => {
-                    if (ingredient.include && ingredients.findIndex(e => e.ingredient === ingredient.ingredient) === -1) {
-                        ingredients.push({
-                            ingredient: ingredient.ingredient,
-                            measurements: [{
+                    if (ingredient.include) {
+                        if (ingredients.findIndex(e => e.ingredient === ingredient.ingredient) === -1) {
+                            ingredients.push({
+                                ingredient: ingredient.ingredient,
+                                measurements: [{
+                                    quantity: ingredient.quantity * recipe.quantity,
+                                    unit: ingredient.measurement
+                                }]
+                            });
+                        } else {
+                            ingredients.find(ing => ing.ingredient === ingredient.ingredient).measurements.push({
                                 quantity: ingredient.quantity * recipe.quantity,
                                 unit: ingredient.measurement
-                            }]
-                        });
-                    } else {
-                        ingredients.find(ing => ing.ingredient === ingredient.ingredient).measurements.push({
-                            quantity: ingredient.quantity * recipe.quantity,
-                            unit: ingredient.measurement
-                        });
+                            });
+                        }
                     }
                 })
             }
@@ -202,20 +204,32 @@ class App extends Component {
         const recipes = this.state.recipeList;
         return (
             <main className="container">
-                <h1>Recipes</h1>
-                <Accordion>
-                    <Recipes
-                        recipes={recipes}
-                        addToBasket={id => this.addToBasket(id)}
-                        removeFromBasket={id => this.removeFromBasket(id)}
-                        toggleIngredient={this.toggleIngredientB}
-                    />
-                </Accordion>
                 <div className="card">
                     <div className="card-header">
-                        Shopping List
-                        <div onClick={() => this.resetBasket()}>
-                            Empty <CartX />
+                        <h2>Recipes</h2>
+                    </div>
+                    <div className="card-body">
+                        <Accordion>
+                            <Recipes
+                                recipes={recipes}
+                                addToBasket={id => this.addToBasket(id)}
+                                removeFromBasket={id => this.removeFromBasket(id)}
+                                toggleIngredient={this.toggleIngredientB}
+                            />
+                        </Accordion>
+                    </div>
+                </div>
+                <div className="card">
+                    <div className="card-header">
+                        <div className="container">
+                            <div className="row">
+                                <div className="col-9">
+                                    <h2>Basket</h2>
+                                </div>
+                                <div className="col-3">
+                                    <button type="button" className="btn btn-danger float-right" onClick={() => this.resetBasket()}>Empty <CartX /></button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div className="card-body">
