@@ -5,6 +5,106 @@ import { Accordion, Button, Card } from "react-bootstrap"
 import { CartX, Plus, Dash } from "react-bootstrap-icons"
 import axios from "axios";
 
+class Ingredients extends Component {
+    render() {
+        const results = this.props.ingredients.map((ingredient) => (
+            <React.Fragment key={ingredient.id}>
+            <tr key={ingredient.id}>
+                <td>
+                    <input type="checkbox" className="form-input" />
+                </td>
+                <td className="text-right">
+                    {ingredient.quantity}
+                </td>
+                <td>
+                    {ingredient.measurement}
+                </td>
+                <td>
+                    {ingredient.ingredient}
+                </td>
+                <td>
+                    {ingredient.prepared}
+                </td>
+                </tr>
+                </React.Fragment>
+        ));
+        return results;
+    }
+}
+
+class Recipes extends Component {
+    render() {
+        return this.props.recipes.map((recipe) => (
+            <Card>
+                <Card.Header>
+                    <div className="container">
+                        <div className="row">
+                            <div className="col-9">
+                                <Accordion.Toggle as={Button} variant="link" eventKey={recipe.id}>
+                                    <a data-toggle="collapse" data-parent="#recipe-list" href={"#collapse" + recipe.id}>
+                                        {recipe.name}
+                                    </a>
+                                </Accordion.Toggle>
+                            </div>
+                            <div className="col-3 btn-group text-right">
+                                <button type="button" className="btn btn-secondary" onClick={() => this.props.removeFromBasket(recipe.id)}><Dash /></button>
+                                <div className="btn btn-secondary">{this.props.basket.find(x => x.id === recipe.id).quantity}</div>
+                                <button type="button" className="btn btn-secondary" onClick={() => this.props.addToBasket(recipe.id)}><Plus /></button>
+                            </div>
+                        </div>
+                    </div>
+                </Card.Header>
+
+                <Accordion.Collapse eventKey={recipe.id}>
+                    <Card.Body>
+                        <table className="table table-striped">
+                            <tbody>
+                                <Ingredients ingredients={recipe.ingredients} />
+                            </tbody>
+                        </table>
+                    </Card.Body>
+                </Accordion.Collapse>
+            </Card>
+        ));
+    }
+}
+
+class Basket extends Component {
+    getIngredients() {
+        const recipes = this.props.recipes;
+        const basket = this.props.basket;
+        let ingredients = [];
+        recipes.map((recipe) => {
+            console.log(basket, recipe.id, basket[recipe.id], recipes, recipe)
+            if (basket[recipe.id].quantity > 0) {
+                recipe.map((ingredient) => {
+                    if (ingredients.findIndex(e => e.ingredient === ingredient.ingredient) === -1) {
+                        ingredients.push({
+                            ingredient: ingredient.ingredient,
+                            quantity: ingredient.quantity,
+                            measurement: ingredient.measurement
+                        });
+                    } else {
+                        
+                    }
+                })
+            }
+        });
+        return ingredients;
+    }
+
+    render() {
+/*        const ingredients = this.getIngredients();
+        console.log(ingredients);
+        return ingredients.map((ingredient) => (
+            <div key={ingredient.id}>Test</div>
+        ));*/
+        return (
+            <div>Test</div>
+        );
+    }
+}
+
 class App extends Component {
     constructor(props) {
         super(props);
@@ -57,76 +157,32 @@ class App extends Component {
         this.setState({ basket: basket });
     }
 
-    renderIngredients = (recipe) => {
-        const ingredients = recipe.ingredients;
-        return ingredients.map((ingredient) => (
-            <tr key={ingredient.id}>
-                <td>
-                    <input type="checkbox" className="form-input" />
-                </td>
-                <td className="text-right">
-                    {ingredient.quantity}
-                </td>
-                <td>
-                    {ingredient.measurement}
-                </td>
-                <td>
-                    {ingredient.ingredient}
-                </td>
-                <td>
-                    {ingredient.prepared}
-                </td>
-            </tr>
-        ));
-    };
-
-    renderRecipes = () => {
-        const newItems = this.state.recipeList;
-        return newItems.map((item) => (
-            <Card>
-                <Card.Header>
-                    <div className="container">
-                        <div className="row">
-                            <div className="col-9">
-                                <Accordion.Toggle as={Button} variant="link" eventKey={item.id}>
-                                    <a data-toggle="collapse" data-parent="#recipe-list" href={"#collapse" + item.id}>
-                                        {item.name}
-                                    </a>
-                                </Accordion.Toggle>
-                            </div>
-                            <div className="col-3 btn-group text-right">
-                                <button type="button" className="btn btn-secondary" onClick={() => this.removeFromBasket(item.id)}><Dash /></button>
-                                
-                                <div className="btn btn-secondary">{this.state.basket.find(x => x.id === item.id).quantity}</div>
-                                <button type="button" className="btn btn-secondary" onClick={() => this.addToBasket(item.id)}><Plus /></button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                </Card.Header>
-
-                <Accordion.Collapse eventKey={item.id}>
-                    <Card.Body>
-                        <table className="table table-striped">
-                            <tbody>
-                                {this.renderIngredients(item)}
-                            </tbody>
-                        </table>
-                    </Card.Body>
-                </Accordion.Collapse>
-            </Card>
-        ));
-    };
-
     render() {
+        const recipes = this.state.recipeList;
+        const basket = this.state.basket;
         return (
             <main className="container">
                 <h1>Recipes</h1>
                 <Accordion>
-                    {this.renderRecipes()}
+                    <Recipes
+                        recipes={recipes}
+                        basket={basket}
+                        addToBasket={id => this.addToBasket(id)}
+                        removeFromBasket={id => this.removeFromBasket(id)}
+                    />
                 </Accordion>
-                <div onClick={() => this.resetBasket()}>
-                    Empty<CartX />
+                <div className="card">
+                    <div className="card-header">
+                        <div onClick={() => this.resetBasket()}>
+                            Empty<CartX />
+                        </div>
+                    </div>
+                    <div className="card-body">
+                        <Basket
+                            recipes={recipes}
+                            basket={basket}
+                        />
+                    </div>
                 </div>
             </main>
         );
