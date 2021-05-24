@@ -8,31 +8,29 @@ import axios from "axios";
 class Ingredients extends Component {
     render() {
         const results = this.props.ingredients.map((ingredient) => (
-            <React.Fragment key={ingredient.id}>
-                <tr key={ingredient.id}>
-                    <td>
-                        <input
-                            type="checkbox"
-                            className="form-input"
-                            checked={ingredient.include}
-                            data-recipeid={ingredient.recipe}
-                            data-ingredientid={ingredient.id}
-                            onChange={this.props.toggleIngredient} />
-                    </td>
-                    <td className="text-right">
-                        {ingredient.quantity}
-                    </td>
-                    <td>
-                        {ingredient.measurement}
-                    </td>
-                    <td>
-                        {ingredient.ingredient}
-                    </td>
-                    <td>
-                        {ingredient.prepared}
-                    </td>
-                    </tr>
-                </React.Fragment>
+            <tr key={ingredient.id} className={ ingredient.include ? "" : "table-secondary" }>
+                <td>
+                    <input
+                        type="checkbox"
+                        className="form-input"
+                        checked={ingredient.include}
+                        data-recipeid={ingredient.recipe}
+                        data-ingredientid={ingredient.id}
+                        onChange={this.props.toggleIngredient} />
+                </td>
+                <td className="text-right">
+                    {ingredient.quantity}
+                </td>
+                <td>
+                    {ingredient.measurement}
+                </td>
+                <td>
+                    {ingredient.ingredient}
+                </td>
+                <td>
+                    {ingredient.prepared}
+                </td>
+            </tr>
         ));
         return results;
     }
@@ -62,16 +60,14 @@ class Recipes extends Component {
                 </Card.Header>
 
                 <Accordion.Collapse eventKey={recipe.id}>
-                    <Card.Body>
-                        <table className="card-table table table-striped">
-                            <tbody>
-                                <Ingredients
-                                    ingredients={recipe.ingredients}
-                                    toggleIngredient={this.props.toggleIngredient}
-                                />
-                            </tbody>
-                        </table>
-                    </Card.Body>
+                    <table className="card-table table">
+                        <tbody>
+                            <Ingredients
+                                ingredients={recipe.ingredients}
+                                toggleIngredient={this.props.toggleIngredient}
+                            />
+                        </tbody>
+                    </table>
                 </Accordion.Collapse>
             </Card>
         ));
