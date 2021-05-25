@@ -4,6 +4,68 @@ import React, { Component } from "react";
 import { Accordion, Button, Card } from "react-bootstrap"
 import { CartX, Plus, Dash } from "react-bootstrap-icons"
 import axios from "axios";
+import { gapiKey, gapiOAuthClientID, gapiOAuthClientSecret } from "./apikey.js";
+
+class TasksAPI extends Component {
+    loadTasksApi() {
+        const script = document.createElement("script");
+        script.src = "https://apis.google.com/js/client.js";
+        const getFunction = this.getTaskLists2;
+        script.onload = () => {
+            
+            window.gapi.load('client', () => {
+                //window.gapi.client.setApiKey(gapiKey());
+                window.gapi.client.init({
+                    "apiKey": gapiKey(),
+                    "discoveryDocs": ["https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest"],
+                    "clientId": gapiOAuthClientID(),
+                    "scope": "https://www.googleapis.com/auth/tasks"
+                }).then(function () {
+                    window.gapi.auth2.getAuthInstance().isSignedIn.listen(getFunction);
+                });
+                window.gapi.client.load("tasks", "v1", () => {
+                    // TODO: SET STATE TO INDICATE GAPI READY
+                });
+            });
+        };
+
+        document.body.appendChild(script);
+    }
+
+    componentDidMount() {
+        this.loadTasksApi();
+    }
+
+    getTaskLists2 = () => {
+        console.log("test");
+        window.gapi.client.request({
+            "path": "https://tasks.googleapis.com/tasks/v1/users/@me/lists",
+            "method": "GET"
+        }).then(
+            function (response) { console.log(response) },
+            function (reason) { console.log(reason) }
+        );
+    };
+
+    getTaskLists = () => {
+        //window.gapi.auth2.init({client_id: gapiOAuthClientID()});
+        window.gapi.auth2.getAuthInstance().signIn();
+    };
+
+/*    getTaskLists = () => {
+        axios
+            .get("https://tasks.googleapis.com/tasks/v1/users/@me/lists")
+            .then((res) => {
+                console.log(res);
+            })
+    };*/
+
+    render() {
+        return (
+            <button type="button" className="btn" onClick={() => this.getTaskLists()}>Export to Tasks</button>
+        );
+    }
+}
 
 class Ingredients extends Component {
     render() {
@@ -223,6 +285,7 @@ class App extends Component {
                                     <h2>Basket</h2>
                                 </div>
                                 <div className="col-3">
+                                    <TasksAPI />
                                     <button type="button" className="btn btn-danger float-right" onClick={() => this.resetBasket()}>Empty <CartX /></button>
                                 </div>
                             </div>
