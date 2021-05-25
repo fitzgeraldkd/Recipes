@@ -7,62 +7,85 @@ import axios from "axios";
 import { gapiKey, gapiOAuthClientID, gapiOAuthClientSecret } from "./apikey.js";
 
 class TasksAPI extends Component {
-    loadTasksApi() {
+    handleClientLoad = () => {
         const script = document.createElement("script");
         script.src = "https://apis.google.com/js/client.js";
-        const getFunction = this.getTaskLists2;
+        
         script.onload = () => {
-            
-            window.gapi.load('client', () => {
-                //window.gapi.client.setApiKey(gapiKey());
-                window.gapi.client.init({
-                    "apiKey": gapiKey(),
-                    "discoveryDocs": ["https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest"],
-                    "clientId": gapiOAuthClientID(),
-                    "scope": "https://www.googleapis.com/auth/tasks"
-                }).then(function () {
-                    window.gapi.auth2.getAuthInstance().isSignedIn.listen(getFunction);
-                });
-                window.gapi.client.load("tasks", "v1", () => {
-                    // TODO: SET STATE TO INDICATE GAPI READY
-                });
-            });
+            const getFunction = this.initClient();
+            window.gapi.load('client:auth2', getFunction)
         };
 
         document.body.appendChild(script);
-    }
-
-    componentDidMount() {
-        this.loadTasksApi();
-    }
-
-    getTaskLists2 = () => {
-        console.log("test");
-        window.gapi.client.request({
-            "path": "https://tasks.googleapis.com/tasks/v1/users/@me/lists",
-            "method": "GET"
-        }).then(
-            function (response) { console.log(response) },
-            function (reason) { console.log(reason) }
-        );
     };
 
-    getTaskLists = () => {
-        //window.gapi.auth2.init({client_id: gapiOAuthClientID()});
+    initClient = () => {
+        const signin = this.updateSigninStatus;
+        window.gapi.load("client", () => {
+            window.gapi.client.init({
+                apiKey: gapiKey(),
+                clientId: gapiOAuthClientID(),
+                discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest"],
+                scope: "https://www.googleapis.com/auth/tasks.readonly"
+            }).then(function () {
+                window.gapi.auth2.getAuthInstance().isSignedIn.listen(signin);
+                signin(window.gapi.auth2.getAuthInstance().isSignedIn.get());
+            }, function (error) {
+                this.appendPre(JSON.stringify(error, null, 2));
+            })
+        })
+    };
+
+    updateSigninStatus = (isSignedIn) => {
+        if (isSignedIn) {
+            this.props.updateAuth("google", true);
+            //this.listTaskLists();
+        } else {
+            this.props.updateAuth("google", false);
+        }
+    };
+
+    handleAuthClick = (event) => {
         window.gapi.auth2.getAuthInstance().signIn();
     };
 
-/*    getTaskLists = () => {
-        axios
-            .get("https://tasks.googleapis.com/tasks/v1/users/@me/lists")
-            .then((res) => {
-                console.log(res);
-            })
-    };*/
+    handleSignoutClick = (event) => {
+        window.gapi.auth2.getAuthInstance().signOut();
+    }
+
+    appendPre = (message) => {
+        console.log(message);
+    };
+
+    listTaskLists = () => {
+        const append = this.appendPre;
+        window.gapi.client.tasks.tasklists.list({
+            'maxResults': 10
+        }).then(function (response) {
+            append('TaskLists:');
+            const taskLists = response.result.items;
+            if (taskLists && taskLists.length > 0) {
+                for (var i = 0; i < taskLists.length; i++) {
+                    var taskList = taskLists[i];
+                    append(taskList.title + " (" + taskList.id + ")");
+                }
+            } else {
+                append("No task lists found.");
+            }
+        });
+    };
+
+    componentDidMount() {
+        this.handleClientLoad();
+    }
 
     render() {
         return (
-            <button type="button" className="btn" onClick={() => this.getTaskLists()}>Export to Tasks</button>
+            <>
+                <button type="button" className="btn" onClick={() => this.handleAuthClick()}>Sign In to Google</button>
+                <button type="button" className="btn" onClick={() => this.listTaskLists()}>Export to Google Tasks</button>
+                <button type="button" className="btn" onClick={() => this.handleSignoutClick()}>Sign Out of Google</button>
+            </>
         );
     }
 }
@@ -196,6 +219,9 @@ class App extends Component {
         this.state = {
             recipeList: [],
             basket: [],
+            auth: {
+                google: false
+            }
         };
     }
 
@@ -258,8 +284,15 @@ class App extends Component {
         this.setState({ recipeList: recipeList });
     }
 
+    updateAuth = (domain, newAuth) => {
+        const auth = this.state.auth;
+        auth[domain] = newAuth;
+        this.setState({ auth: auth });
+    }
+
     render() {
         const recipes = this.state.recipeList;
+        const auth = this.state.auth;
         return (
             <main className="container">
                 <div className="card">
@@ -281,11 +314,14 @@ class App extends Component {
                     <div className="card-header">
                         <div className="container">
                             <div className="row">
-                                <div className="col-9">
+                                <div className="col-6">
                                     <h2>Basket</h2>
                                 </div>
-                                <div className="col-3">
-                                    <TasksAPI />
+                                <div className="col-6">
+                                    <TasksAPI
+                                        auth={auth}
+                                        updateAuth={this.updateAuth}
+                                    />
                                     <button type="button" className="btn btn-danger float-right" onClick={() => this.resetBasket()}>Empty <CartX /></button>
                                 </div>
                             </div>
