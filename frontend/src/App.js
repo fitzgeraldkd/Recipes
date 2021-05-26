@@ -1,10 +1,22 @@
 import logo from './logo.svg';
 import './App.css';
 import React, { Component } from "react";
-import { Accordion, Button, Card } from "react-bootstrap"
+import { Accordion, Button, Card, Modal } from "react-bootstrap"
 import { CartX, Plus, Dash } from "react-bootstrap-icons"
 import axios from "axios";
 import { gapiKey, gapiOAuthClientID, gapiOAuthClientSecret } from "./apikey.js";
+
+class ModalTaskLists extends Component {
+    render() {
+        const tasklists = this.props.tasklists;
+        console.log(tasklists);
+        return tasklists.map((tasklist) => (
+            <button key={tasklist.id} type="button" className="list-group-item list-group-item-action" onClick={() => this.props.addTasks(tasklist.id) }>
+                {tasklist.title}
+            </button>
+        ));
+    }
+}
 
 class TasksAPI extends Component {
     handleClientLoad = () => {
@@ -26,7 +38,7 @@ class TasksAPI extends Component {
                 apiKey: gapiKey(),
                 clientId: gapiOAuthClientID(),
                 discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest"],
-                scope: "https://www.googleapis.com/auth/tasks.readonly"
+                scope: "https://www.googleapis.com/auth/tasks"
             }).then(function () {
                 window.gapi.auth2.getAuthInstance().isSignedIn.listen(signin);
                 signin(window.gapi.auth2.getAuthInstance().isSignedIn.get());
@@ -39,7 +51,6 @@ class TasksAPI extends Component {
     updateSigninStatus = (isSignedIn) => {
         if (isSignedIn) {
             this.props.updateAuth("google", true);
-            //this.listTaskLists();
         } else {
             this.props.updateAuth("google", false);
         }
@@ -53,38 +64,96 @@ class TasksAPI extends Component {
         window.gapi.auth2.getAuthInstance().signOut();
     }
 
-    appendPre = (message) => {
-        console.log(message);
-    };
-
     listTaskLists = () => {
-        const append = this.appendPre;
+        const updateTasklists = this.props.updateTasklists;
+        const tasklists = [];
         window.gapi.client.tasks.tasklists.list({
             'maxResults': 10
         }).then(function (response) {
-            append('TaskLists:');
-            const taskLists = response.result.items;
-            if (taskLists && taskLists.length > 0) {
-                for (var i = 0; i < taskLists.length; i++) {
-                    var taskList = taskLists[i];
-                    append(taskList.title + " (" + taskList.id + ")");
-                }
-            } else {
-                append("No task lists found.");
-            }
+            tasklists.push(...response.result.items);
+            updateTasklists(tasklists);
         });
     };
+
+    addTasks = (tasklist) => {
+        console.log(tasklist);
+        console.log(this.props.basket);
+        this.props.basket.map((ingredient) => {
+            console.log(ingredient);
+            const taskTitle = "test";
+            window.gapi.client.tasks.tasks.insert({
+                "tasklist": tasklist,
+                "resource": {
+                    "title": taskTitle
+                }
+            });
+        });
+    }
 
     componentDidMount() {
         this.handleClientLoad();
     }
 
     render() {
+        //const tasklists = this.listTaskLists();
+        const gapiButtons = () => {
+            if (this.props.auth.google) {
+                return (
+                    <>
+                        <div>
+                            <button type="button" className="btn" onClick={() => this.listTaskLists()}>Get Tasklists</button>
+                            <button type="button" className="btn" onClick={() => this.handleSignoutClick()}>Sign Out of Google</button>
+                        </div>
+                        <div className="list-group">
+                            <ModalTaskLists
+                                tasklists={this.props.tasklists}
+                                addTasks={this.addTasks}
+                            />
+                        </div>
+                    </>
+                );
+            } else {
+                return (
+                    <button type="button" className="btn" onClick={() => this.handleAuthClick()}>Sign In to Google</button>
+                );
+            }
+        };
+
         return (
             <>
-                <button type="button" className="btn" onClick={() => this.handleAuthClick()}>Sign In to Google</button>
-                <button type="button" className="btn" onClick={() => this.listTaskLists()}>Export to Google Tasks</button>
-                <button type="button" className="btn" onClick={() => this.handleSignoutClick()}>Sign Out of Google</button>
+                {gapiButtons()}
+            </>
+        );
+    }
+}
+
+class ExportModal extends Component {
+    render() {
+        const show = this.props.modal.export
+        const handleClose = () => this.props.updateModal("export", false);
+        const handleShow = () => this.props.updateModal("export", true);
+
+        return (
+            <>
+                <Button variant="primary" onClick={handleShow}>Export</Button>
+                <Modal show={show} onHide={handleClose}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Export</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <TasksAPI
+                            auth={this.props.auth}
+                            updateAuth={this.props.updateAuth}
+                            tasklists={this.props.tasklists}
+                            updateTasklists={this.props.updateTasklists}
+                            basket={this.props.basket}
+                        />
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button variant="secondary" onClick={handleClose}>Close</Button>
+                    </Modal.Footer>
+                </Modal>
+
             </>
         );
     }
@@ -204,6 +273,7 @@ class Basket extends Component {
 
     render() {
         const ingredients = this.getIngredients();
+        //this.props.updateBasket(ingredients);
         return ingredients.map((ingredient) => (
             <div key={ingredient.id}>
                 {this.renderMeasurements(ingredient.measurementSum)}
@@ -219,9 +289,13 @@ class App extends Component {
         this.state = {
             recipeList: [],
             basket: [],
+            modal: {
+                export: false
+            },
             auth: {
                 google: false
-            }
+            },
+            tasklists: []
         };
     }
 
@@ -284,15 +358,32 @@ class App extends Component {
         this.setState({ recipeList: recipeList });
     }
 
+    updateBasket = (basket) => {
+        this.setState({ basket: basket });
+    }
+
     updateAuth = (domain, newAuth) => {
         const auth = this.state.auth;
         auth[domain] = newAuth;
         this.setState({ auth: auth });
     }
 
+    updateModal = (modalWindow, value) => {
+        const modal = this.state.modal;
+        modal[modalWindow] = value;
+        this.setState({ modal: modal });
+    }
+
+    updateTasklists = (tasklists) => {
+        this.setState({ tasklists: tasklists });
+    }
+
     render() {
         const recipes = this.state.recipeList;
+        const modal = this.state.modal;
         const auth = this.state.auth;
+        const tasklists = this.state.tasklists;
+        const basket = this.state.basket;
         return (
             <main className="container">
                 <div className="card">
@@ -318,9 +409,14 @@ class App extends Component {
                                     <h2>Basket</h2>
                                 </div>
                                 <div className="col-6">
-                                    <TasksAPI
+                                    <ExportModal
+                                        modal={modal}
+                                        updateModal={this.updateModal}
                                         auth={auth}
                                         updateAuth={this.updateAuth}
+                                        tasklists={tasklists}
+                                        updateTasklists={this.updateTasklists}
+                                        basket={basket}
                                     />
                                     <button type="button" className="btn btn-danger float-right" onClick={() => this.resetBasket()}>Empty <CartX /></button>
                                 </div>
@@ -330,6 +426,7 @@ class App extends Component {
                     <div className="card-body">
                         <Basket
                             recipes={recipes}
+                            updateBasket={this.updateBasket}
                         />
                     </div>
                 </div>
