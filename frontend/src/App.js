@@ -79,13 +79,16 @@ class TasksAPI extends Component {
         console.log(tasklist);
         console.log(this.props.basket);
         this.props.basket.map((ingredient) => {
+            let taskTitle = ""
+            taskTitle += ingredient.ingredient;
             console.log(ingredient);
-            const taskTitle = "test";
             window.gapi.client.tasks.tasks.insert({
                 "tasklist": tasklist,
                 "resource": {
                     "title": taskTitle
                 }
+            }).then(function (response) {
+                //console.log(response);
             });
         });
     }
@@ -229,37 +232,6 @@ class Recipes extends Component {
 }
 
 class Basket extends Component {
-    getIngredients() {
-        const recipes = this.props.recipes;
-        const ingredients = [];
-        recipes.map((recipe) => {
-            if (recipe.quantity > 0) {
-                recipe.ingredients.map((ingredient) => {
-                    if (ingredient.include) {
-                        if (ingredients.findIndex(e => e.ingredient === ingredient.ingredient) === -1) {
-                            ingredients.push({
-                                ingredient: ingredient.ingredient,
-                                measurements: [{
-                                    quantity: ingredient.quantity * recipe.quantity,
-                                    unit: ingredient.measurement
-                                }]
-                            });
-                        } else {
-                            ingredients.find(ing => ing.ingredient === ingredient.ingredient).measurements.push({
-                                quantity: ingredient.quantity * recipe.quantity,
-                                unit: ingredient.measurement
-                            });
-                        }
-                    }
-                })
-            }
-        });
-        return ingredients.map(ingredient => ({
-            ...ingredient,
-            measurementSum: addMeasurements(ingredient.measurements).map(e => simplifyUnits(e))
-        }));
-    }
-
     renderMeasurements(measurementSum) {
         return measurementSum.map(measurement => (
             <React.Fragment>
@@ -272,8 +244,7 @@ class Basket extends Component {
     }
 
     render() {
-        const ingredients = this.getIngredients();
-        //this.props.updateBasket(ingredients);
+        const ingredients = this.props.basket;
         return ingredients.map((ingredient) => (
             <div key={ingredient.id}>
                 {this.renderMeasurements(ingredient.measurementSum)}
@@ -333,6 +304,7 @@ class App extends Component {
         const recipeList = this.state.recipeList;
         recipeList.find(x => x.id === recipeID).quantity++;
         this.setState({ recipeList: recipeList });
+        this.updateBasket();
     }
 
     removeFromBasket(recipeID) {
@@ -341,26 +313,61 @@ class App extends Component {
             recipeList.find(x => x.id === recipeID).quantity--
         }
         this.setState({ recipeList: recipeList });
+        this.updateBasket();
     }
 
-    toggleIngredientB = (event) => {
+    toggleIngredient = (event) => {
         console.log(event);
         const recipeID = parseInt(event.target.dataset.recipeid);
         const ingredientID = parseInt(event.target.dataset.ingredientid);
         const recipeList = this.state.recipeList;
         recipeList.find(x => x.id === recipeID).ingredients.find(y => y.id === ingredientID).include ^= true;
         this.setState({ recipeList: recipeList });
+        this.updateBasket();
     }
 
-    toggleIngredient(recipeID, ingredientID) {
+/*    toggleIngredient(recipeID, ingredientID) {
         const recipeList = this.state.recipeList;
         recipeList.find(x => x.id === recipeID).ingredients.find(y => y.id === ingredientID).include ^= true;
         this.setState({ recipeList: recipeList });
-    }
+    }*/
 
-    updateBasket = (basket) => {
+    updateBasket() {
+        const recipes = this.state.recipeList;
+        const ingredients = [];
+        recipes.map((recipe) => {
+            if (recipe.quantity > 0) {
+                recipe.ingredients.map((ingredient) => {
+                    if (ingredient.include) {
+                        if (ingredients.findIndex(e => e.ingredient === ingredient.ingredient) === -1) {
+                            ingredients.push({
+                                ingredient: ingredient.ingredient,
+                                measurements: [{
+                                    quantity: ingredient.quantity * recipe.quantity,
+                                    unit: ingredient.measurement
+                                }]
+                            });
+                        } else {
+                            ingredients.find(ing => ing.ingredient === ingredient.ingredient).measurements.push({
+                                quantity: ingredient.quantity * recipe.quantity,
+                                unit: ingredient.measurement
+                            });
+                        }
+                    }
+                })
+            }
+        });
+        const basket = ingredients.map(ingredient => ({
+            ...ingredient,
+            measurementSum: addMeasurements(ingredient.measurements).map(e => simplifyUnits(e))
+        }));
+        console.log(basket);
         this.setState({ basket: basket });
     }
+
+/*    updateBasket = (basket) => {
+        this.setState({ basket: basket });
+    }*/
 
     updateAuth = (domain, newAuth) => {
         const auth = this.state.auth;
@@ -372,11 +379,11 @@ class App extends Component {
         const modal = this.state.modal;
         modal[modalWindow] = value;
         this.setState({ modal: modal });
-    }
+    };
 
     updateTasklists = (tasklists) => {
         this.setState({ tasklists: tasklists });
-    }
+    };
 
     render() {
         const recipes = this.state.recipeList;
@@ -396,7 +403,7 @@ class App extends Component {
                                 recipes={recipes}
                                 addToBasket={id => this.addToBasket(id)}
                                 removeFromBasket={id => this.removeFromBasket(id)}
-                                toggleIngredient={this.toggleIngredientB}
+                                toggleIngredient={this.toggleIngredient}
                             />
                         </Accordion>
                     </div>
@@ -426,7 +433,7 @@ class App extends Component {
                     <div className="card-body">
                         <Basket
                             recipes={recipes}
-                            updateBasket={this.updateBasket}
+                            basket={basket}
                         />
                     </div>
                 </div>
