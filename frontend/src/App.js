@@ -5,7 +5,7 @@ import { Accordion } from "react-bootstrap"
 import { CartX } from "react-bootstrap-icons"
 import axios from "axios";
 import { ExportModal } from "./Export.js";
-import { Recipes } from "./Recipes.js";
+import { RecipeModal, Recipes } from "./Recipes.js";
 import { roundDecimal, simplifyUnits, addMeasurements } from "./Units.js";
 
 class Basket extends Component {
@@ -22,10 +22,11 @@ class Basket extends Component {
 
     render() {
         const ingredients = this.props.basket;
+        console.log(ingredients);
         return ingredients.map((ingredient) => (
             <div key={ingredient.id}>
                 {this.renderMeasurements(ingredient.measurementSum)}
-                {ingredient.ingredient}
+                {ingredient.ingredient_name}
             </div>
         ));
     }
@@ -43,12 +44,14 @@ class App extends Component {
             auth: {
                 google: false
             },
-            tasklists: []
+            tasklists: [],
+            activeRecipe: null
         };
     }
 
     componentDidMount() {
         this.refreshList();
+        //this.addRecipe();
     }
 
     componentDidUpdate() {
@@ -70,6 +73,40 @@ class App extends Component {
 
             })
          .catch((err) => console.log(err));
+    };
+
+    addRecipe = () => {
+        axios.defaults.xsrfCookieName = 'csrftoken';
+        axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+        const item = {
+            name: "Test Recipe",
+            ingredients: [
+                {
+                    ingredient_name: "Milk",
+                    ingredient: 3,
+                    quantity: 50,
+                    measurement: "cup",
+                    prepared: "",
+                    optional: false
+                }
+            ]
+        };
+        axios
+            .post("/api/recipes/", item)
+            .then((res) => this.addIngredients(item.ingredients, res.data.id));
+/*        item.ingredients.map(ing => (
+                this.addIngredients()
+                ingredient.recipe = res.data.id
+                axios.post("/api/ingredients", ingredient).then((res2) => console.log(res2))
+            )));*/
+        this.refreshList();
+    };
+
+    addIngredients = (ingredients, recipeID) => {
+        ingredients.map(ingredient => (axios.post("/api/ingredients/", {
+            ...ingredient,
+            recipe: recipeID
+        }).then((res) => console.log(res))));
     };
 
     resetBasket = () => {
@@ -113,6 +150,7 @@ class App extends Component {
                         if (ingredients.findIndex(e => e.ingredient === ingredient.ingredient) === -1) {
                             ingredients.push({
                                 ingredient: ingredient.ingredient,
+                                ingredient_name: ingredient.ingredient_name,
                                 measurements: [{
                                     quantity: ingredient.quantity * recipe.quantity,
                                     unit: ingredient.measurement
@@ -152,17 +190,70 @@ class App extends Component {
         this.setState({ tasklists: tasklists });
     };
 
+    updateActiveRecipe = (recipe) => {
+        let activeRecipe = null;
+        if (recipe === null) {
+            activeRecipe = {
+                id: null,
+                name: "",
+                ingredients: [{
+                    id: 0,
+                    ingredientName: "",
+                    quantity: null,
+                    measurement: "",
+                    prepared: "",
+                    optional: false
+                }]
+            }
+        }
+/*        let activeRecipe = null;
+        if (recipe != null) {
+            activeRecipe = null;
+        }*/
+        this.setState({ activeRecipe: activeRecipe });
+    };
+
+    activeRecipeAddIngredient = () => {
+        const activeRecipe = this.state.activeRecipe;
+        const newId = activeRecipe.ingredients[activeRecipe.ingredients.length - 1].id + 1;
+        activeRecipe.ingredients.push({
+            id: newId,
+            ingredientName: "",
+            quantity: null,
+            measurement: "",
+            prepared: "",
+            optional: false
+        })
+        this.setState({ activeRecipe: activeRecipe });
+    }
+
     render() {
         const recipes = this.state.recipeList;
         const modal = this.state.modal;
         const auth = this.state.auth;
         const tasklists = this.state.tasklists;
         const basket = this.state.basket;
+        const activeRecipe = this.state.activeRecipe;
         return (
             <main className="container">
                 <div className="card">
                     <div className="card-header">
-                        <h2>Recipes</h2>
+                        <div className="container">
+                            <div className="row">
+                                <div className="col-6">
+                                    <h2>Recipes</h2>
+                                </div>
+                                <div className="col-6">
+                                    <RecipeModal
+                                        modal={modal}
+                                        updateModal={this.updateModal}
+                                        activeRecipe={activeRecipe}
+                                        updateActiveRecipe={this.updateActiveRecipe}
+                                        activeRecipeAddIngredient={this.activeRecipeAddIngredient}
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div className="card-body">
                         <Accordion>

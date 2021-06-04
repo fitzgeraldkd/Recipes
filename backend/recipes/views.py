@@ -1,7 +1,11 @@
 from django.shortcuts import render
 from rest_framework import viewsets
-from .serializers import RecipeSerializer
-from .models import Recipe
+from .serializers import RecipeSerializer, RecipeIngredientSerializer
+from .models import Recipe, RecipeIngredient
+
+class RecipeIngredientView(viewsets.ModelViewSet):
+    serializer_class = RecipeIngredientSerializer
+    queryset = RecipeIngredient.objects.all()
 
 class RecipeView(viewsets.ModelViewSet):
     serializer_class = RecipeSerializer
