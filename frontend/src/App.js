@@ -7,6 +7,7 @@ import axios from "axios";
 import { ExportModal } from "./Export.js";
 import { RecipeModal, Recipes } from "./Recipes.js";
 import { roundDecimal, simplifyUnits, addMeasurements } from "./Units.js";
+import RecipeAPI from "./API.js";
 
 class Basket extends Component {
     renderMeasurements(measurementSum) {
@@ -22,7 +23,6 @@ class Basket extends Component {
 
     render() {
         const ingredients = this.props.basket;
-        console.log(ingredients);
         return ingredients.map((ingredient) => (
             <div key={ingredient.id}>
                 {this.renderMeasurements(ingredient.measurementSum)}
@@ -45,7 +45,8 @@ class App extends Component {
                 google: false
             },
             tasklists: [],
-            activeRecipe: null
+            activeRecipe: null,
+            recipeAPI: new RecipeAPI()
         };
     }
 
@@ -75,10 +76,8 @@ class App extends Component {
          .catch((err) => console.log(err));
     };
 
-    addRecipe = () => {
-        axios.defaults.xsrfCookieName = 'csrftoken';
-        axios.defaults.xsrfHeaderName = 'X-CSRFToken';
-        const item = {
+    addRecipe = (recipe) => {
+/*        const recipe = {
             name: "Test Recipe",
             ingredients: [
                 {
@@ -90,35 +89,20 @@ class App extends Component {
                     optional: false
                 }
             ]
-        };
-        axios
-            .post("/api/recipes/", item)
-            .then((res) => this.addIngredients(item.ingredients, res.data.id));
-/*        item.ingredients.map(ing => (
-                this.addIngredients()
-                ingredient.recipe = res.data.id
-                axios.post("/api/ingredients", ingredient).then((res2) => console.log(res2))
-            )));*/
+        };*/
+        this.state.recipeAPI.addRecipe(recipe);
         this.refreshList();
-    };
-
-    addIngredients = (ingredients, recipeID) => {
-        ingredients.map(ingredient => (axios.post("/api/ingredients/", {
-            ...ingredient,
-            recipe: recipeID
-        }).then((res) => console.log(res))));
     };
 
     resetBasket = () => {
         const recipeList = this.state.recipeList.map(obj => ({ ...obj, quantity: 0 }));
-        this.setState({ recipeList: recipeList });
+        this.setState({ recipeList: recipeList }, () => this.updateBasket());
     };
 
     addToBasket(recipeID) {
         const recipeList = this.state.recipeList;
         recipeList.find(x => x.id === recipeID).quantity++;
-        this.setState({ recipeList: recipeList });
-        this.updateBasket();
+        this.setState({ recipeList: recipeList }, () => this.updateBasket());
     }
 
     removeFromBasket(recipeID) {
@@ -126,8 +110,7 @@ class App extends Component {
         if (recipeList.find(x => x.id === recipeID).quantity > 0) {
             recipeList.find(x => x.id === recipeID).quantity--
         }
-        this.setState({ recipeList: recipeList });
-        this.updateBasket();
+        this.setState({ recipeList: recipeList }, () => this.updateBasket());
     }
 
     toggleIngredient = (event) => {
@@ -170,7 +153,6 @@ class App extends Component {
             ...ingredient,
             measurementSum: addMeasurements(ingredient.measurements).map(e => simplifyUnits(e))
         }));
-        console.log(basket);
         this.setState({ basket: basket });
     }
 
@@ -190,7 +172,7 @@ class App extends Component {
         this.setState({ tasklists: tasklists });
     };
 
-    updateActiveRecipe = (recipe) => {
+    updateActiveRecipe = (recipe=null) => {
         let activeRecipe = null;
         if (recipe === null) {
             activeRecipe = {
@@ -198,19 +180,23 @@ class App extends Component {
                 name: "",
                 ingredients: [{
                     id: 0,
-                    ingredientName: "",
+                    ingredient_name: "",
                     quantity: null,
                     measurement: "",
                     prepared: "",
                     optional: false
                 }]
-            }
+            };
+        } else {
+            activeRecipe = recipe;
         }
 /*        let activeRecipe = null;
         if (recipe != null) {
             activeRecipe = null;
         }*/
         this.setState({ activeRecipe: activeRecipe });
+        console.log(activeRecipe);
+        console.log(this.state.recipeList);
     };
 
     activeRecipeAddIngredient = () => {
@@ -218,7 +204,7 @@ class App extends Component {
         const newId = activeRecipe.ingredients[activeRecipe.ingredients.length - 1].id + 1;
         activeRecipe.ingredients.push({
             id: newId,
-            ingredientName: "",
+            ingredient_name: "",
             quantity: null,
             measurement: "",
             prepared: "",
@@ -262,6 +248,8 @@ class App extends Component {
                                 addToBasket={id => this.addToBasket(id)}
                                 removeFromBasket={id => this.removeFromBasket(id)}
                                 toggleIngredient={this.toggleIngredient}
+                                updateModal={this.updateModal}
+                                updateActiveRecipe={this.updateActiveRecipe}
                             />
                         </Accordion>
                     </div>

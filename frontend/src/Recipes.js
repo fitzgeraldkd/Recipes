@@ -1,20 +1,25 @@
 import React, { Component } from "react";
 import { Accordion, Button, Card, Col, Form, Modal } from "react-bootstrap"
-import { Plus, Dash, XCircleFill } from "react-bootstrap-icons"
+import { Plus, Dash, PencilSquare, XCircleFill } from "react-bootstrap-icons"
 
 class RecipeModalIngredient extends Component {
+    handleChange(event) {
+        const activeRecipe = this.props.activeRecipe;
+    }
+
     render() {
         const elements = this.props.activeRecipe.ingredients.map((ingredient) => (
             <Form.Row key={ingredient.id.toString()}>
                 <Col xs="3">
                     {/*<input type="text" list="data" />*/}
-                    <Form.Control type="text" list="data" placeholder="ingredient" size="sm" />
+                    {console.log(ingredient)}
+                    <Form.Control type="text" list="data" placeholder="ingredient" value={ingredient.ingredient_name} size="sm" />
                     <datalist id="data">
                         <option value="test" />
                     </datalist>
                 </Col>
                 <Col xs="3">
-                    <Form.Control type="number" placeholder="quantity" size="sm" />
+                    <Form.Control type="number" placeholder="quantity" value={ ingredient.quantity } size="sm" />
                 </Col>
                 <Col xs="2">
                     <Form.Control as="select" size="sm">
@@ -22,7 +27,7 @@ class RecipeModalIngredient extends Component {
                     </Form.Control>
                 </Col>
                 <Col xs="3">
-                    <Form.Control type="text" placeholder="prepared" size="sm" />
+                    <Form.Control type="text" placeholder="prepared" value={ingredient.prepared} size="sm" />
                 </Col>
                 <Col xs="1">
                     <XCircleFill color="red" />
@@ -34,14 +39,39 @@ class RecipeModalIngredient extends Component {
 }
 
 export class RecipeModal extends Component {
+    handleChange = (event) => {
+        // Create an array to relate form IDs to the recipe properties
+        const recipeProps = {
+            formRecipeName: "name"
+        }
+
+        const recipe = this.props.activeRecipe;
+        recipe[recipeProps[event.target.id]] = event.target.value;
+        this.props.updateActiveRecipe(recipe);
+    }
+
     editRecipe = (recipe) => {
         this.props.updateActiveRecipe(recipe);
         this.props.updateModal("recipe", true);
     };
 
+    cancelEditRecipe = () => {
+        this.props.updateModal("recipe", false);
+        this.props.updateActiveRecipe();
+    }
+
+    getRecipeName = () => {
+        try {
+            return this.props.activeRecipe.name;
+        }
+        catch (err) {
+            return "";
+        }
+    };
+
     render() {
         const show = this.props.modal.recipe;
-        const handleClose = () => this.props.updateModal("recipe", false);
+        const handleClose = () => this.cancelEditRecipe();
         //const handleShow = () => this.props.updateModal("recipe", true);
         const handleShow = () => this.editRecipe(null);
         return (
@@ -55,7 +85,7 @@ export class RecipeModal extends Component {
                         <Form>
                             <Form.Group controlId="formRecipeName">
                                 <Form.Label>Recipe Name</Form.Label>
-                                <Form.Control type="text" placeholder="Recipe Name" />
+                                <Form.Control type="text" placeholder="Recipe Name" value={this.getRecipeName()} onChange={this.handleChange} />
                             </Form.Group>
                             <RecipeModalIngredient
                                 activeRecipe={this.props.activeRecipe}
@@ -93,7 +123,6 @@ class Ingredients extends Component {
                     {ingredient.measurement}
                 </td>
                 <td>
-                    {console.log(ingredient)}
                     {ingredient.ingredient_name}
                 </td>
                 <td>
@@ -106,18 +135,27 @@ class Ingredients extends Component {
 }
 
 export class Recipes extends Component {
+    editRecipe = (recipe) => {
+        console.log(recipe);
+        this.props.updateActiveRecipe(recipe);
+        this.props.updateModal("recipe", true);
+    };
+
     render() {
         return this.props.recipes.map((recipe) => (
             <Card key={recipe.id.toString()}>
                 <Card.Header>
                     <div className="container">
                         <div className="row">
-                            <div className="col-9">
+                            <div className="col-8">
                                 <Accordion.Toggle as={Button} variant="link" eventKey={recipe.id}>
                                     <a data-toggle="collapse" data-parent="#recipe-list" href={"#collapse" + recipe.id}>
                                         {recipe.name}
                                     </a>
                                 </Accordion.Toggle>
+                            </div>
+                            <div className="col-1 text-right">
+                                <button type="button" className="btn btn-primary" onClick={() => this.editRecipe(recipe)}><PencilSquare /></button>
                             </div>
                             <div className="col-3 btn-group text-right">
                                 <button type="button" className="btn btn-secondary" onClick={() => this.props.removeFromBasket(recipe.id)}><Dash /></button>
