@@ -2,7 +2,7 @@ export function roundDecimal(value, decimalPlace = 0) {
     return Math.round(value * (10 ** decimalPlace)) / (10 ** decimalPlace)
 }
 
-function measurementUnits() {
+export function measurementUnits() {
     const units = {
         // Volume
         gal: {

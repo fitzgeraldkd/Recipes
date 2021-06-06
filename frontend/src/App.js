@@ -8,11 +8,12 @@ import { ExportModal } from "./Export.js";
 import { RecipeModal, Recipes } from "./Recipes.js";
 import { roundDecimal, simplifyUnits, addMeasurements } from "./Units.js";
 import RecipeAPI from "./API.js";
+const clonedeep = require('lodash.clonedeep')
 
 class Basket extends Component {
     renderMeasurements(measurementSum) {
         return measurementSum.map(measurement => (
-            <React.Fragment>
+            <React.Fragment key={measurement.unit}>
                 {roundDecimal(measurement.quantity, 1)}
                 {" "}
                 {measurement.unit}
@@ -36,7 +37,8 @@ class App extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            recipeList: [],
+            recipes: [],
+            ingredients: [],
             basket: [],
             modal: {
                 export: false
@@ -51,14 +53,14 @@ class App extends Component {
     }
 
     componentDidMount() {
-        this.refreshList();
+        this.refreshRecipes();
         //this.addRecipe();
     }
 
     componentDidUpdate() {
     }
 
-    refreshList = () => {
+    refreshRecipes = () => {
         axios
          .get("/api/recipes/")
             .then((res) => {
@@ -70,11 +72,21 @@ class App extends Component {
                         include: true,
                     }))
                 }));
-                this.setState({ recipeList: recipes})
+                this.setState({ recipes: recipes}, this.refreshIngredients())
 
             })
          .catch((err) => console.log(err));
     };
+
+    refreshIngredients = () => {
+        axios
+            .get("/api/ingredients/")
+            .then((res) => {
+                const ingredients = Array.from(new Set(res.data.map(obj => { return obj.ingredient_name }))).sort();
+                this.setState({ ingredients: ingredients });
+                console.log(ingredients);
+        })
+    }
 
     addRecipe = (recipe) => {
 /*        const recipe = {
@@ -91,40 +103,40 @@ class App extends Component {
             ]
         };*/
         this.state.recipeAPI.addRecipe(recipe);
-        this.refreshList();
+        this.refreshRecipes();
     };
 
     resetBasket = () => {
-        const recipeList = this.state.recipeList.map(obj => ({ ...obj, quantity: 0 }));
-        this.setState({ recipeList: recipeList }, () => this.updateBasket());
+        const recipes = this.state.recipes.map(obj => ({ ...obj, quantity: 0 }));
+        this.setState({ recipes: recipes }, () => this.updateBasket());
     };
 
     addToBasket(recipeID) {
-        const recipeList = this.state.recipeList;
-        recipeList.find(x => x.id === recipeID).quantity++;
-        this.setState({ recipeList: recipeList }, () => this.updateBasket());
+        const recipes = this.state.recipes;
+        recipes.find(x => x.id === recipeID).quantity++;
+        this.setState({ recipes: recipes }, () => this.updateBasket());
     }
 
     removeFromBasket(recipeID) {
-        const recipeList = this.state.recipeList;
-        if (recipeList.find(x => x.id === recipeID).quantity > 0) {
-            recipeList.find(x => x.id === recipeID).quantity--
+        const recipes = this.state.recipes;
+        if (recipes.find(x => x.id === recipeID).quantity > 0) {
+            recipes.find(x => x.id === recipeID).quantity--
         }
-        this.setState({ recipeList: recipeList }, () => this.updateBasket());
+        this.setState({ recipes: recipes }, () => this.updateBasket());
     }
 
     toggleIngredient = (event) => {
         console.log(event);
         const recipeID = parseInt(event.target.dataset.recipeid);
         const ingredientID = parseInt(event.target.dataset.ingredientid);
-        const recipeList = this.state.recipeList;
-        recipeList.find(x => x.id === recipeID).ingredients.find(y => y.id === ingredientID).include ^= true;
-        this.setState({ recipeList: recipeList });
+        const recipes = this.state.recipes;
+        recipes.find(x => x.id === recipeID).ingredients.find(y => y.id === ingredientID).include ^= true;
+        this.setState({ recipes: recipes });
         this.updateBasket();
     }
 
     updateBasket() {
-        const recipes = this.state.recipeList;
+        const recipes = this.state.recipes;
         const ingredients = [];
         recipes.map((recipe) => {
             if (recipe.quantity > 0) {
@@ -181,22 +193,16 @@ class App extends Component {
                 ingredients: [{
                     id: 0,
                     ingredient_name: "",
-                    quantity: null,
+                    quantity: "",
                     measurement: "",
                     prepared: "",
                     optional: false
                 }]
             };
         } else {
-            activeRecipe = recipe;
+            activeRecipe = clonedeep(recipe);
         }
-/*        let activeRecipe = null;
-        if (recipe != null) {
-            activeRecipe = null;
-        }*/
         this.setState({ activeRecipe: activeRecipe });
-        console.log(activeRecipe);
-        console.log(this.state.recipeList);
     };
 
     activeRecipeAddIngredient = () => {
@@ -205,7 +211,7 @@ class App extends Component {
         activeRecipe.ingredients.push({
             id: newId,
             ingredient_name: "",
-            quantity: null,
+            quantity: "",
             measurement: "",
             prepared: "",
             optional: false
@@ -214,12 +220,13 @@ class App extends Component {
     }
 
     render() {
-        const recipes = this.state.recipeList;
+        const recipes = this.state.recipes;
         const modal = this.state.modal;
         const auth = this.state.auth;
         const tasklists = this.state.tasklists;
         const basket = this.state.basket;
         const activeRecipe = this.state.activeRecipe;
+        const ingredients = this.state.ingredients;
         return (
             <main className="container">
                 <div className="card">
@@ -236,6 +243,7 @@ class App extends Component {
                                         activeRecipe={activeRecipe}
                                         updateActiveRecipe={this.updateActiveRecipe}
                                         activeRecipeAddIngredient={this.activeRecipeAddIngredient}
+                                        ingredients={ingredients}
                                     />
                                 </div>
                             </div>
