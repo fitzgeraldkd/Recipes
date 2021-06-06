@@ -20,7 +20,7 @@ from recipes import views
 
 router = routers.DefaultRouter()
 router.register(r'recipes', views.RecipeView, 'recipe')
-router.register(r'ingredients', views.RecipeIngredientView, 'ingredient')
+router.register(r'ingredients', views.IngredientView, 'ingredient')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

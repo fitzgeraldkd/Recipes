@@ -27,7 +27,7 @@ class Basket extends Component {
         return ingredients.map((ingredient) => (
             <div key={ingredient.id}>
                 {this.renderMeasurements(ingredient.measurementSum)}
-                {ingredient.ingredient_name}
+                {ingredient.name}
             </div>
         ));
     }
@@ -82,9 +82,8 @@ class App extends Component {
         axios
             .get("/api/ingredients/")
             .then((res) => {
-                const ingredients = Array.from(new Set(res.data.map(obj => { return obj.ingredient_name }))).sort();
+                const ingredients = Array.from(new Set(res.data.map(obj => { return obj.name }))).sort();
                 this.setState({ ingredients: ingredients });
-                console.log(ingredients);
         })
     }
 
@@ -126,7 +125,6 @@ class App extends Component {
     }
 
     toggleIngredient = (event) => {
-        console.log(event);
         const recipeID = parseInt(event.target.dataset.recipeid);
         const ingredientID = parseInt(event.target.dataset.ingredientid);
         const recipes = this.state.recipes;
@@ -142,19 +140,18 @@ class App extends Component {
             if (recipe.quantity > 0) {
                 recipe.ingredients.map((ingredient) => {
                     if (ingredient.include) {
-                        if (ingredients.findIndex(e => e.ingredient === ingredient.ingredient) === -1) {
+                        if (ingredients.findIndex(ing => ing.name === ingredient.name) === -1) {
                             ingredients.push({
-                                ingredient: ingredient.ingredient,
-                                ingredient_name: ingredient.ingredient_name,
+                                name: ingredient.name,
                                 measurements: [{
                                     quantity: ingredient.quantity * recipe.quantity,
-                                    unit: ingredient.measurement
+                                    unit: ingredient.unit
                                 }]
                             });
                         } else {
-                            ingredients.find(ing => ing.ingredient === ingredient.ingredient).measurements.push({
+                            ingredients.find(ing => ing.name === ingredient.name).measurements.push({
                                 quantity: ingredient.quantity * recipe.quantity,
-                                unit: ingredient.measurement
+                                unit: ingredient.unit
                             });
                         }
                     }

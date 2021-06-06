@@ -7,9 +7,9 @@ class RecipeModalIngredient extends Component {
     handleChange = (event) => {
         // Create an array to relate form IDs to the ingredient properties
         const ingredientProps = {
-            formIngredientName: "ingredient_name",
+            formIngredientName: "name",
             formIngredientQuantity: "quantity",
-            formIngredientUnit: "measurement",
+            formIngredientUnit: "unit",
             formIngredientPrepared: "prepared"
         }
 
@@ -46,7 +46,7 @@ class RecipeModalIngredient extends Component {
             <Form.Row key={ingredient.id.toString()}>
                 <Col xs="3">
                     <label>
-                        <Form.Control id={`formIngredientName_${ingredient.id}`} type="text" list="ingredientNameList" placeholder="ingredient" value={ingredient.ingredient_name} size="sm" onChange={this.handleChange} required />
+                        <Form.Control id={`formIngredientName_${ingredient.id}`} type="text" list="ingredientNameList" placeholder="ingredient" value={ingredient.name} size="sm" onChange={this.handleChange} required />
                         <datalist id="ingredientNameList">
                             {this.ingredientsList()}
                         </datalist>
@@ -59,7 +59,7 @@ class RecipeModalIngredient extends Component {
                 </Col>
                 <Col xs="2">
                     <label>
-                        <Form.Control id={`formIngredientUnit_${ingredient.id}`} type="text" list="ingredientUnitList" placeholder="unit" value={ingredient.measurement} size="sm" onChange={this.handleChange} />
+                        <Form.Control id={`formIngredientUnit_${ingredient.id}`} type="text" list="ingredientUnitList" placeholder="unit" value={ingredient.unit} size="sm" onChange={this.handleChange} />
                         <datalist id="ingredientUnitList">
                             {this.measurementList()}
                         </datalist>
@@ -165,10 +165,10 @@ class Ingredients extends Component {
                     {ingredient.quantity}
                 </td>
                 <td>
-                    {ingredient.measurement}
+                    {ingredient.unit}
                 </td>
                 <td>
-                    {ingredient.ingredient_name}
+                    {ingredient.name}
                 </td>
                 <td>
                     {ingredient.prepared}
