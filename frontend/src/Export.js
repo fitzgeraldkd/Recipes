@@ -5,7 +5,6 @@ import { gapiKey, gapiOAuthClientID } from "./apikey.js";
 class ModalTaskLists extends Component {
     render() {
         const tasklists = this.props.tasklists;
-        console.log(tasklists);
         return tasklists.map((tasklist) => (
             <button key={tasklist.id} type="button" className="list-group-item list-group-item-action" onClick={() => this.props.addTasks(tasklist.id)}>
                 {tasklist.title}
