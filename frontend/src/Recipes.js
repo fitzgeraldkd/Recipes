@@ -52,7 +52,7 @@ class RecipeModalIngredient extends Component {
                         </datalist>
                     </label>
                 </Col>
-                <Col xs="3">
+                <Col xs="2">
                     <label>
                         <Form.Control id={`formIngredientQuantity_${ingredient.id}`} type="number" placeholder="quantity" value={ingredient.quantity} size="sm" onChange={this.handleChange} />
                     </label>
@@ -68,6 +68,11 @@ class RecipeModalIngredient extends Component {
                 <Col xs="3">
                     <label>
                         <Form.Control id={`formIngredientPrepared_${ingredient.id}`} type="text" placeholder="prepared" value={ingredient.prepared} size="sm" onChange={this.handleChange} />
+                    </label>
+                </Col>
+                <Col xs="1">
+                    <label>
+                        <Form.Check id={`formIngredientOptional_${ingredient.id}`} type="checkbox" className="form-input" value={ingredient.optional} size="sm" onChange={this.handleChange} data-bs-toggle="tooltip" data-bs-placement="top" title="Optional" />
                     </label>
                 </Col>
                 <Col xs="1">
@@ -91,7 +96,11 @@ export class RecipeModal extends Component {
         const recipe = this.props.activeRecipe;
         recipe[recipeProps[event.target.id]] = event.target.value;
         this.props.updateActiveRecipe(recipe);
-    }
+    };
+
+    handleSubmit = (event) => {
+        this.props.addActiveRecipe()
+    };
 
     editRecipe = (recipe) => {
         this.props.updateActiveRecipe(recipe);
@@ -114,6 +123,7 @@ export class RecipeModal extends Component {
 
     render() {
         const show = this.props.modal.recipe;
+        const handleSubmit = () => this.handleSubmit();
         const handleClose = () => this.cancelEditRecipe();
         //const handleShow = () => this.props.updateModal("recipe", true);
         const handleShow = () => this.editRecipe(null);
@@ -139,7 +149,7 @@ export class RecipeModal extends Component {
                         <Button variant="success" size="sm" onClick={() => this.props.activeRecipeAddIngredient()}>Add Ingredient</Button>
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button variant="success" onClick={handleClose}>Submit</Button>
+                        <Button variant="success" onClick={handleSubmit}>Submit</Button>
                         <Button variant="secondary" onClick={handleClose}>Close</Button>
                     </Modal.Footer>
                 </Modal>

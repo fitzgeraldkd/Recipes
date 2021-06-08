@@ -29,19 +29,34 @@ class RecipeAPI {
     }*/
 
     addRecipe(recipe) {
-        axios
-            .post("/api/recipes/", recipe)
-            .then((res) => this.addIngredients(recipe.ingredients, res.data.id))
-            .then((res) => console.log(res));
+        if (recipe.id === null) {
+            axios
+                .post("/api/recipes/", recipe)
+                .then((res) => this.addIngredients(recipe.ingredients, res.data.id))
+                .then((res) => console.log(res));
+        } else {
+            axios
+                .put(`/api/recipes/${recipe.id}/`, recipe)
+                .then((res) => this.addIngredients(recipe.ingredients, res.data.id))
+                .then((res) => console.log(res));
+        }
     }
 
     addIngredients(ingredients, recipeID) {
-        ingredients.map(ingredient => (axios.post("/api/ingredients/", {
-            ...ingredient,
-            recipe: recipeID
-        }).then((res) => console.log(res))));
+        ingredients.map(ingredient => {
+            if ("newIngredient" in ingredient) {
+                axios.post("/api/ingredients/", {
+                    ...ingredient,
+                    recipe: recipeID
+                }).then((res) => console.log(res));
+            } else {
+                axios.put(`/api/ingredients/${ingredient.id}/`, {
+                    ...ingredient,
+                    recipe: recipeID
+                }).then((res) => console.log(res));
+            }
+        });
     }
-
     
 }
 

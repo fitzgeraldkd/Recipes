@@ -1,4 +1,4 @@
-import logo from './logo.svg';
+//import logo from './logo.svg';
 import './App.css';
 import React, { Component } from "react";
 import { Accordion } from "react-bootstrap"
@@ -105,6 +105,10 @@ class App extends Component {
         this.refreshRecipes();
     };
 
+    addActiveRecipe = () => {
+        this.addRecipe(this.state.activeRecipe);
+    }
+
     resetBasket = () => {
         const recipes = this.state.recipes.map(obj => ({ ...obj, quantity: 0 }));
         this.setState({ recipes: recipes }, () => this.updateBasket());
@@ -189,11 +193,12 @@ class App extends Component {
                 name: "",
                 ingredients: [{
                     id: 0,
-                    ingredient_name: "",
+                    name: "",
                     quantity: "",
                     measurement: "",
                     prepared: "",
-                    optional: false
+                    optional: false,
+                    newIngredient: true
                 }]
             };
         } else {
@@ -207,11 +212,12 @@ class App extends Component {
         const newId = activeRecipe.ingredients[activeRecipe.ingredients.length - 1].id + 1;
         activeRecipe.ingredients.push({
             id: newId,
-            ingredient_name: "",
+            name: "",
             quantity: "",
             measurement: "",
             prepared: "",
-            optional: false
+            optional: false,
+            newIngredient: true
         })
         this.setState({ activeRecipe: activeRecipe });
     }
@@ -241,6 +247,7 @@ class App extends Component {
                                         updateActiveRecipe={this.updateActiveRecipe}
                                         activeRecipeAddIngredient={this.activeRecipeAddIngredient}
                                         ingredients={ingredients}
+                                        addActiveRecipe={this.addActiveRecipe}
                                     />
                                 </div>
                             </div>
