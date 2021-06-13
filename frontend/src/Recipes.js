@@ -99,7 +99,8 @@ export class RecipeModal extends Component {
     };
 
     handleSubmit = (event) => {
-        this.props.addActiveRecipe()
+        this.props.addActiveRecipe();
+        this.props.updateModal("recipe", false);
     };
 
     editRecipe = (recipe) => {
